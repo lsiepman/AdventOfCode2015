@@ -15,7 +15,6 @@ To what floor do the instructions take Santa?"""
 
 #%% IMPORTS
 import re
-#%% SETTINGS
 
 #%% DATA
 data = r"***REMOVED***"
