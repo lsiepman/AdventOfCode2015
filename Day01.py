@@ -4,8 +4,8 @@ Created on Fri Jan 10 14:16:39 2020
 
 @author: laura
 """
-#%% GOAL - Part 1
-"""***REMOVED***
+# %% GOAL - Part 1
+"""
 
 An opening parenthesis, (, means he should go up one floor, and a closing parenthesis, ), means he should go down one floor.
 
@@ -13,32 +13,34 @@ The apartment building is very tall, and the basement is very deep; he will neve
 
 To what floor do the instructions take Santa?"""
 
-#%% IMPORTS
+# %% IMPORTS
 import re
 
-#%% DATA
-data = r"***REMOVED***"
+# %% DATA
+data = r""
 
-#%% CALCULATIONS - Part 1
+# %% CALCULATIONS - Part 1
 up = len(re.findall("\(", data))
 down = len(re.findall("\)", data))
 floor = up - down
 print("floor =", floor)
 
-#%% GOAL- Part 2
+# %% GOAL- Part 2
 """Now, given the same instructions, find the position of the first character that causes him to enter the basement (floor -1). The first character in the instructions has position 1, the second character has position 2, and so on.
 
 What is the position of the character that causes Santa to first enter the basement? """
 
-#%% CALCULATIONS - Part 2
+# %% CALCULATIONS - Part 2
 now = 0
 i = 0
 while now != -1:
     if re.search("\(", data[i]):
         now += 1
     else:
-        now -=1
-    
+        now -= 1
+
     i += 1
 
-print("position =", i) #python indexes from 0, but you add an additional one at the end
+print(
+    "position =", i
+)  # python indexes from 0, but you add an additional one at the end
