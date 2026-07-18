@@ -1,5 +1,10 @@
 #file extensions
 *.exe
+*.txt
 
 #files
-Data* 
+data*
+
+# virtual environments
+venv/*
+env/*
