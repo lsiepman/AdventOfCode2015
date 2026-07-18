@@ -8,3 +8,6 @@ data*
 # virtual environments
 venv/*
 env/*
+
+# vs code files
+.vscode/*
