@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 10 15:39:43 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 import operator
 
 
-# %% FUNCTIONS
 def Movement(current_loc, move):
     """Function for tracking locations
 
@@ -28,10 +19,10 @@ def Movement(current_loc, move):
 
     return new_loc
 
+with open("./data/data_03.txt") as f:
+    data = f.read().strip()
 
-# %% DATA
-data = ""
-# %% CALCULATIONS - Part 1
+# Part 1
 start = (0, 0)
 data_split = list(data)
 
@@ -57,10 +48,10 @@ for i in move_grid:
 
 unique_locations = list(set(locations))
 
-print(len(unique_locations), "houses will receive at least one gift")
+print(f"Part 1: {len(unique_locations)} houses will receive at least one gift")
 
 
-# %% CALCULATIONS - Part 2
+# Part 2
 move_grid_santa = move_grid[0::2]
 move_grid_robo = move_grid[1::2]
 
@@ -82,7 +73,5 @@ total_locations_year_2 = locations_robo + locations_santa
 
 unique_locations_year_2 = list(set(total_locations_year_2))
 
-print(
-    len(unique_locations_year_2),
-    "houses will receive at least one gift in the second year",
-)
+print(f"Part 2: {len(unique_locations_year_2)}",
+      "houses will receive at least one gift in the second year")
