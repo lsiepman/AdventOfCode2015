@@ -1,39 +1,21 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 12 19:41:33 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
-import numpy as np
-import pandas as pd
 import re
 
-# %% DATA
+import numpy as np
+import pandas as pd
+
+# DATA
 data = []
-with open("Data - Day06.txt", "r") as file:
+with open("./data/data_06.txt") as file:
     for line in file:
         data.append(line)
 
 data = pd.DataFrame(data)
-# %% TESTING METHOD
-example = np.zeros((10, 10))
-example[4:6, 5:9] = 1
 
-example[4:7, 5:7] = np.where(
-    example[4:7, 5:7] == 1, example[4:7, 5:7] - 1, example[4:7, 5:7] + 1
-)
-
-
-# %% FUNCTIONS
 def FindAction(string):
-    action = re.search("[a-z\s]*", string).group().strip()
+    action = re.search(r"[a-z\s]*", string).group().strip()
 
     return action
 
-
-# %% CALCULATION 1
 # clean instructions
 data["Action"] = data[0].apply(FindAction)
 data["Xfrom"] = data[0]
@@ -77,7 +59,7 @@ data["Yto"] = data["Yto"].str.split(",").str[-1]
 for col in ["Xfrom", "Yfrom", "Xto", "Yto"]:
     data[col] = data[col].astype(int)
 
-# Execute instructions
+# Part 1
 lights = np.zeros((1000, 1000))
 
 for row in range(len(data)):
@@ -87,13 +69,10 @@ for row in range(len(data)):
     yto = data["Yto"][row] + 1
 
     if data["Action"][row] == "turn on":
-        print(row, "on")
         lights[yfrom:yto, xfrom:xto] = 1
     elif data["Action"][row] == "turn off":
-        print(row, "off")
         lights[yfrom:yto, xfrom:xto] = 0
     elif data["Action"][row] == "toggle":
-        print(row, "toggle")
         lights[yfrom:yto, xfrom:xto] = np.where(
             lights[yfrom:yto, xfrom:xto] == 1,
             lights[yfrom:yto, xfrom:xto] - 1,
@@ -102,9 +81,9 @@ for row in range(len(data)):
     else:
         print(row, "error")
 
-print("Number of lights on:", lights.sum())
+print(f"Part 1: {int(lights.sum())}")
 
-# %% Calculations 2
+# Part 2
 bright = np.zeros((1000, 1000))
 
 for row in range(len(data)):
@@ -123,4 +102,4 @@ for row in range(len(data)):
     else:
         print(row, "error")
 
-print("Total brightness of lights:", bright.sum())
+print(f"Part 2: {int(bright.sum())}")
