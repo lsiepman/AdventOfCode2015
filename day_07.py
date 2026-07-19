@@ -1,6 +1,3 @@
-import pandas as pd
-import numpy as np
-import re
 
 def check_int(value, overview):
     if value.isdigit():
@@ -80,7 +77,7 @@ def part2(data, start):
 
 if __name__ == "__main__":
 
-    with open("./data/data_07.txt", "r") as file:
+    with open("./data/data_07.txt") as file:
         data = file.read().splitlines()
     new_start = part1(data.copy())
     part2(data, new_start)
