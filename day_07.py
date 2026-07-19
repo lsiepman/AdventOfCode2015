@@ -1,139 +1,71 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 15 11:18:04 2020
-
-@author: laura
-"""
-
-# %% IMPORTS & SETTINGS
-maximum = 65535
 import pandas as pd
 import numpy as np
 import re
-from tqdm import tqdm
 
-pd.set_option("mode.chained_assignment", None)
-
-# %% DATA
-data = []
-with open("Data - Day07.txt", "r") as file:
-    for line in file:
-        data.append(line)
-
-data = pd.DataFrame(data)
-
-
-# %% FUNCTIONS PART 1
-def FindAssignedNum(string):
-    if "AND" not in string:
-        num = re.search("^\d*", string).group()
-        if num == "":
-            num = np.nan
-        else:
-            num = int(num)
+def check_int(value, overview):
+    if value.isdigit():
+        return int(value)
     else:
-        num = np.nan
-    return num
+        return overview[value]
 
-
-def FindOperation(string):
-    op = re.search(r"\b[A-Z]{2,7}", string)
-    if op == None:
-        op = ""
+# PART 1
+def executeOperation(row, overview):
+    items = row.split(" ")
+    
+    if "AND" in row:
+        val1 = check_int(items[0], overview)
+        val2 = check_int(items[2], overview) 
+        overview[items[-1]] = val1 & val2
+    elif "OR" in row:
+        val1 = check_int(items[0], overview)
+        val2 = check_int(items[2], overview)
+        overview[items[-1]] = val1 | val2
+    elif "NOT" in row:
+        val1 = overview[items[1]]
+        overview[items[-1]] = ~val1
+    elif "LSHIFT" in row:
+        val1 = check_int(items[0], overview)
+        val2 = int(items[2])
+        overview[items[-1]] = val1 << val2
+    elif "RSHIFT" in row:
+        val1 = check_int(items[0], overview)
+        val2 = int(items[2])
+        overview[items[-1]] = val1 >> val2
     else:
-        op = op.group()
-    return op
+        val1 = check_int(items[0], overview)
+        overview[items[-1]] = val1
+
+    return overview
+
+def determineReady(row, overview_keys):
+    excludes = ["RSHIFT", "AND", "NOT", "OR", "LSHIFT"]
+    relevant = row.split("->")[0].strip()
+    items = relevant.split(" ")
+    clean = [i for i in items if i not in excludes and not i.isdigit()]
+    return set(clean).issubset(overview_keys)
+
+def determineSeen(row, overview_keys):
+    result = row.split(" ")[-1]
+    return result in overview_keys
+
+def part1(data):
+    overview = {}
+    seen = set(overview.keys())
+    removal = []
+    while "a" not in seen:
+        data = [i for i in data if i not in removal]
+        for i in data:
+            if not determineSeen(i, seen) and determineReady(i, seen):
+                overview = executeOperation(i, overview)
+                seen.update(overview.keys())
+                removal.append(i)
+
+    print(f"Part 1 {overview['a']}")
+
+if __name__ == "__main__":
+
+    with open("./data/data_07.txt", "r") as file:
+        data = file.read().splitlines()
+    part1(data)
 
 
-def CalculateWires(data, maximum=65535):
-    for i in tqdm(range(len(data))):
-        wireval = data["value_wire"][i]
-        if pd.notna(wireval):
-            continue
-
-        input1 = data["input_wire_1"][i]
-        inputval1 = data.loc[data["wire"] == input1]["value_wire"]
-
-        if len(inputval1) == 0:
-            inputval1 = np.nan
-        else:
-            inputval1 = inputval1.iloc[0]
-
-        if input1 in [1, "1"]:
-            inputval1 = 1
-
-        input2 = data["input_wire_2"][i]
-        inputval2 = data.loc[data["wire"] == input2]["value_wire"]
-        if len(inputval2) == 0:
-            inputval2 = np.nan
-        else:
-            inputval2 = inputval2.iloc[0]
-        operation = data["operation"][i]
-        shift_value = data["shift_value"][i]
-
-        if operation == "AND" and pd.notna(inputval1) and pd.notna(inputval2):
-            data["value_wire"][i] = int(inputval1) & int(inputval2)
-
-        elif operation == "OR" and pd.notna(inputval1) and pd.notna(inputval2):
-            data["value_wire"][i] = int(inputval1) | int(inputval2)
-
-        elif operation == "NOT" and pd.notna(inputval1):
-            data["value_wire"][i] = maximum - int(inputval1)
-
-        elif operation == "RSHIFT" and pd.notna(inputval1):
-            data["value_wire"][i] = int(inputval1) >> int(shift_value)
-        elif operation == "LSHIFT" and pd.notna(inputval1):
-            data["value_wire"][i] = int(inputval1) << int(shift_value)
-        else:
-            continue
-
-    return data
-
-
-# %% CALCULATIONS PART 1
-
-# preparing table
-data["wire"] = data[0].str.split(" ").str[-1].str.strip()
-data["value_wire"] = np.nan
-data["input_wire_1"] = ""
-data["input_wire_2"] = ""
-data["shift_value"] = np.nan
-
-data["operation"] = data[0].apply(FindOperation)
-
-for row in range(len(data)):
-    if data["operation"][row] in ["AND", "OR"]:
-        data["input_wire_1"][row] = data[0][row].split(" ")[0]
-        data["input_wire_2"][row] = data[0][row].split(" ")[2]
-    elif data["operation"][row] in ["RSHIFT", "LSHIFT"]:
-        data["shift_value"][row] = int(data[0][row].split(" ")[2])
-        data["input_wire_1"][row] = data[0][row].split(" ")[0]
-    else:
-        data["input_wire_1"][row] = data[0][row].split(" ")[1]
-
-# filling table
-data["value_wire"] = data[0].apply(FindAssignedNum)
-
-for i in range(1, 250):
-    data = CalculateWires(data)
-
-
-print(
-    "the signal provided to wire a =",
-    data.loc[data["wire"] == "lx"]["value_wire"].iloc[0],
-)
-
-# %% GOAL PART 2
-"""Now, take the signal you got on wire a, override wire b to that signal, and reset the other wires (including wire a). What new signal is ultimately provided to wire a?"""
-
-# %% CALCULATION 2
-data["value_wire"] = np.nan
-data["value_wire"] = data[0].apply(FindAssignedNum)
-data.loc[data["wire"] == "b", ["value_wire"]] = 16076
-for i in range(1, 250):
-    data = CalculateWires(data)
-
-print(
-    "the new signal provided to wire a =",
-    data.loc[data["wire"] == "lx"]["value_wire"].iloc[0],
-)
