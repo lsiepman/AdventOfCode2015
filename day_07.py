@@ -61,11 +61,28 @@ def part1(data):
                 removal.append(i)
 
     print(f"Part 1 {overview['a']}")
+    return overview['a']
+
+def part2(data, start):
+    overview = {"b": start}
+    seen = set(overview.keys())
+    removal = []
+    while "a" not in seen:
+        data = [i for i in data if i not in removal]
+        for i in data:
+            if not determineSeen(i, seen) and determineReady(i, seen):
+                overview = executeOperation(i, overview)
+                seen.update(overview.keys())
+                removal.append(i)
+
+    print(f"Part 2 {overview['a']}")
+
 
 if __name__ == "__main__":
 
     with open("./data/data_07.txt", "r") as file:
         data = file.read().splitlines()
-    part1(data)
+    new_start = part1(data.copy())
+    part2(data, new_start)
 
 
