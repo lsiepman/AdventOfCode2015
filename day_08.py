@@ -1,6 +1,7 @@
 # IMPORTS
-import pandas as pd
 import re
+
+import pandas as pd
 
 # DATA
 with open("./data/data_08.txt") as file:
@@ -26,7 +27,7 @@ data["len_string"] = data["clean_string"].apply(len)
 len_string = sum(data["len_string"])
 len_lit = sum(data["len_literal"])
 answer = len_lit - len_string
-print("Part 1: {}".format(answer))
+print(f"Part 1: {answer}")
 
 # Part 2
 def EncodeString(string):
@@ -38,4 +39,4 @@ def EncodeString(string):
 
 
 data["len_encoded"] = data[0].apply(EncodeString)
-print("Part 2 {}".format(sum(data["len_encoded"]) - len_lit))
+print(f"Part 2 {sum(data["len_encoded"]) - len_lit}")
