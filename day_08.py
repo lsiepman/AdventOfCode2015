@@ -1,29 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 15 20:35:19 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
+# IMPORTS
 import pandas as pd
 import re
 
-# %% DATA
-data = []
-with open("Data - Day08.txt", "r") as file:
-    for line in file:
-        data.append(line)
+# DATA
+with open("./data/data_08.txt") as file:
+    data = file.read().splitlines()
 
 data = pd.DataFrame(data)
-
-# %% CALCULATION 1
-# clean data
 data[0] = data[0].str.strip()
 
 # string literals
 data["len_literal"] = data[0].apply(len)
-
 
 def CleanString(string):
     step1 = re.sub(r"\\x[0-9A-Fa-f]{2}", "n", string)
@@ -33,17 +20,15 @@ def CleanString(string):
 
     return step4
 
-
 data["clean_string"] = data[0].apply(CleanString)
 data["len_string"] = data["clean_string"].apply(len)
 
 len_string = sum(data["len_string"])
 len_lit = sum(data["len_literal"])
 answer = len_lit - len_string
-print("The answer is {}".format(answer))
+print("Part 1: {}".format(answer))
 
-
-# %% CALCULATIONS 2
+# Part 2
 def EncodeString(string):
     encoded = string
     encoded = encoded.replace("\\", "\\\\").replace('"', '\\"')
@@ -53,4 +38,4 @@ def EncodeString(string):
 
 
 data["len_encoded"] = data[0].apply(EncodeString)
-print("The second answer is {}".format(sum(data["len_encoded"]) - len_lit))
+print("Part 2 {}".format(sum(data["len_encoded"]) - len_lit))
