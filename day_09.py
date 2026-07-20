@@ -1,25 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 16 23:20:28 2020
-
-@author: laura
-"""
-
-# %% imports
-import pandas as pd
 import itertools
-from tqdm import tqdm
 
-# %% data
-data = []
-with open("Data - Day09.txt", "r") as file:
-    for line in file:
-        data.append(line)
+import pandas as pd
+
+with open("./data/data_09.txt") as file:
+    data= file.read().splitlines()
 
 data = pd.DataFrame(data)
 
 
-# %% calculation part 1
+#  calculation part 1
 def Fro(string):
     return string.split(" ")[0]
 
@@ -39,7 +28,7 @@ data.drop(0, inplace=True, axis=1)
 
 data2 = data.copy()
 data2.columns = ["To", "From", "Distance"]
-data = data.append(data2)
+data = pd.concat([data, data2], ignore_index=True)
 data.drop_duplicates(inplace=True)
 
 list_of_places = list(data.From.unique()) + list(data.To.unique())
@@ -59,7 +48,7 @@ unique_sequences.columns = [
 
 def CalcDist(data, df):
     distances = []
-    for i in tqdm(range(len(df))):
+    for i in range(len(df)):
         start = df["start"][i]
         step1 = df["step1"][i]
         step2 = df["step2"][i]
@@ -102,5 +91,5 @@ dist_all = CalcDist(data, unique_sequences)
 print("The shortest distance is", min(dist_all))
 
 
-# %% CALCULATIONS 2
+# Part 2
 print("The longest distance is", max(dist_all))
