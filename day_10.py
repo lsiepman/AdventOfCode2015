@@ -1,35 +1,28 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 17 23:37:22 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 from itertools import groupby
 
-# %% DATA
-data = "1321131112"
+# DATA
+with open('./data/data_10.txt') as f:
+    data = f.read().strip()
 
-# %% CALC 1
+# Part 1
 seq = data
-for i in range(40):
+for _ in range(40):
     string = []
     for k, g in groupby(seq):
         output = str(len(list(g))) + k
         string.append(output)
     seq = "".join(string)
 
-print("The answer is", len(seq))
+print(f"Part 1: {len(seq)}")
 
 
-# %% CALC 2
+# Part 2
 seq = data
-for i in range(50):
+for _ in range(50):
     string = []
     for k, g in groupby(seq):
         output = str(len(list(g))) + k
         string.append(output)
     seq = "".join(string)
 
-print("The answer is", len(seq))
+print(f"Part 2: {len(seq)}")
