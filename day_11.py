@@ -1,6 +1,7 @@
 import re
 import string
 
+
 def find_passwords(data, alphabet):  
     data_nr = []
     for i in data:
@@ -76,7 +77,11 @@ def find_passwords(data, alphabet):
 
         passnr_new = passnr.copy()
         word = create_word(passnr_new, alphabet)
-        if check_forbidden(word) and check_double(word) and check_combinations(word, alphabet):
+        if (
+            check_forbidden(word) and 
+            check_double(word) and 
+            check_combinations(word, alphabet)
+        ):
             passwords.append(word)
 
         if len(passwords) == 2:
@@ -88,25 +93,18 @@ def create_word(new_nr, alphabet):
         word += alphabet[j - 1]
     return word
 
-def check_forbidden(word, forbidden = ['i', 'l', 'o']):
-    if all(forbidden not in list(word) for symbol in forbidden):
-        return True
-    return False
+def check_forbidden(word, forbidden = ('i', 'l', 'o')):
+    return all(forbidden not in list(word) for symbol in forbidden)
 
 def check_double(word):
-    if len(re.findall(r"(\w)(\1)", word)) == 2:
-        return True
-    return False
+    return len(re.findall(r"(\w)(\1)", word)) == 2
 
 def check_combinations(word, alphabet):
     combinations = []
     for i in range(24):
         combinations.append(alphabet[i] + alphabet[i+1] + alphabet[i+2])
-
-    if any(combi in word for combi in combinations):
-        return True
-    return False
-
+    return any(combi in word for combi in combinations)
+       
 
 if __name__ == "__main__":
     #  DATA
