@@ -1,24 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 18 00:26:40 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 import re
+import string
 
-# %% DATA
-data = "vzbxkghb"
-# %% CALC 1
-alphabet = "0abcdefghijklmnopqrstuvwxyz"
-alphabet = list(alphabet)
-
-data_list = list(data)
-
+#  DATA
+with open('./data/data_11.txt') as f:
+    data = f.read().strip()
+# Part 1
+alphabet = string.ascii_lowercase
 data_nr = []
-for i in data_list:
-    data_nr.append(alphabet.index(i))
+for i in data:
+    data_nr.append(alphabet.index(i) + 1)
 
 new_nr = []
 passnr = data_nr.copy()
@@ -34,47 +24,32 @@ for i in range(3000000):
 
     if eight < 26:
         eight += 1
-    elif eight == 26 and seven < 26:
+    elif seven < 26:
         eight = 1
         seven += 1
-    elif eight == 26 and seven == 26 and six < 26:
+    elif six < 26:
         eight = 1
         seven = 1
         six += 1
-    elif eight == 26 and seven == 26 and six == 26 and five < 26:
+    elif five < 26:
         eight = 1
         seven = 1
         six = 1
         five += 1
-    elif eight == 26 and seven == 26 and six == 26 and five == 26 and four < 24:
+    elif four < 26:
         eight = 1
         seven = 1
         six = 1
         five = 1
         four += 1
-    elif (
-        eight == 26
-        and seven == 26
-        and six == 26
-        and five == 26
-        and four == 24
-        and three < 26
-    ):
+    elif three < 26:
         eight = 1
         seven = 1
         six = 1
         five = 1
         four = 1
         three += 1
-    elif (
-        eight == 26
-        and seven == 26
-        and six == 26
-        and five == 26
-        and four == 24
-        and three == 26
-        and two < 26
-    ):
+    elif two < 26:
         eight = 1
         seven = 1
         six = 1
@@ -82,16 +57,7 @@ for i in range(3000000):
         four = 1
         three = 1
         two += 1
-    elif (
-        eight == 26
-        and seven == 26
-        and six == 26
-        and five == 26
-        and four == 24
-        and three == 26
-        and two == 26
-        and one < 26
-    ):
+    elif one < 26:
         eight = 1
         seven = 1
         six = 1
@@ -120,14 +86,13 @@ new_words = []
 for i in new_nr:
     word = []
     for j in i:
-        word.append(alphabet[j])
+        word.append(alphabet[j - 1])
     new_words.append(word)
 
+forbidden = ['i', 'l', 'o']
 first_selection = []
 for i in new_words:
-    if "i" in i or "l" in i or "o" in i:
-        print("removing")
-    else:
+    if all(forbidden not in i for symbol in forbidden):
         first_selection.append("".join(i))
 
 sec_selection = []
@@ -135,40 +100,14 @@ for i in first_selection:
     if len(re.findall(r"(\w)(\1)", i)) == 2:
         sec_selection.append(i)
 
-combinations = [
-    "abc",
-    "bcd",
-    "cde",
-    "def",
-    "efg",
-    "fgh",
-    "ghi",
-    "hij",
-    "ijk",
-    "jkl",
-    "klm",
-    "lmn",
-    "mno",
-    "nop",
-    "opq",
-    "pqr",
-    "qrs",
-    "rst",
-    "stu",
-    "tuv",
-    "uvw",
-    "vwx",
-    "wxy",
-    "xyz",
-]
+combinations = []
+for i in range(24):
+    combinations.append(alphabet[i] + alphabet[i+1] + alphabet[i+2])
 
 three_selection = []
 for i in sec_selection:
     if any(combi in i for combi in combinations):
         three_selection.append(i)
 
-print("Santa's new password is", three_selection[0])
-# %% GOAL 2
-"""Santa's password expired again. What's the next one?"""
-# %% CALC 2
-print("Santa's second new password is", three_selection[1])
+print(f"Part 1 {three_selection[0]}")
+print(f"Part 2 {three_selection[1]}")
