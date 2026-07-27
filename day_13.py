@@ -1,297 +1,128 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 18 16:38:31 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
-import pandas as pd
 import numpy as np
-import itertools
-from tqdm import tqdm
-
-# %% DATA
-data = []
-with open("Data - Day13.txt", "r") as file:
-    for line in file:
-        data.append(line)
-
-data = pd.DataFrame(data)
-# %% CALC 1
-data = data[0].str.split(" ", expand=True)
-data[3] = data[3].astype(int)
-data[3] = np.where(data[2] == "lose", data[3] * -1, data[3])
-data[10] = data[10].str.replace(".", "").str.replace("\n", "")
-
-data = data.drop([1, 2, 4, 5, 6, 7, 8, 9], axis=1)
-data.columns = ["person1", "score", "person2"]
-
-# seating orders
-people = data["person1"].unique().tolist()
-orders = pd.DataFrame(itertools.permutations(people))
-orders.columns = ["start", "step1", "step2", "step3", "step4", "step5", "step6", "end"]
+import pandas as pd
 
 
-def CalcDist(data, df):
-    distances = []
-    for i in tqdm(range(len(df))):
-        start = df["start"][i]
-        step1 = df["step1"][i]
-        step2 = df["step2"][i]
-        step3 = df["step3"][i]
-        step4 = df["step4"][i]
-        step5 = df["step5"][i]
-        step6 = df["step6"][i]
-        end = df["end"][i]
-
-        dist1 = (
-            data.loc[
-                (data["person1"] == start) & (data["person2"] == step1), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == start) & (data["person1"] == step1), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist2 = (
-            data.loc[
-                (data["person1"] == step1) & (data["person2"] == step2), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step1) & (data["person1"] == step2), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist3 = (
-            data.loc[
-                (data["person1"] == step2) & (data["person2"] == step3), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step2) & (data["person1"] == step3), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist4 = (
-            data.loc[
-                (data["person1"] == step3) & (data["person2"] == step4), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step3) & (data["person1"] == step4), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist5 = (
-            data.loc[
-                (data["person1"] == step4) & (data["person2"] == step5), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step4) & (data["person1"] == step5), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist6 = (
-            data.loc[
-                (data["person1"] == step5) & (data["person2"] == step6), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step5) & (data["person1"] == step6), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist7 = (
-            data.loc[
-                (data["person1"] == step6) & (data["person2"] == end), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step6) & (data["person1"] == end), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist8 = (
-            data.loc[
-                (data["person1"] == end) & (data["person2"] == start), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == end) & (data["person1"] == start), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist_tot = dist1 + dist2 + dist3 + dist4 + dist5 + dist6 + dist7 + dist8
-        distances.append(dist_tot)
-
-    return distances
+def preprocess_data(data):
+    data = pd.DataFrame(data)
+    data = data[0].str.split(" ", expand=True)
+    data[3] = data[3].astype(int)
+    data[3] = np.where(data[2] == "lose", data[3] * -1, data[3])
+    data[10] = data[10].str.replace(".", "").str.replace("\n", "")
+    data = data.drop([1, 2, 4, 5, 6, 7, 8, 9], axis=1)
+    data.columns = ["Guest A", "Score A", "Guest B"]
+    return data
 
 
-dist_all = CalcDist(data, orders)
-orders["scores"] = dist_all
-print("The highest score is", max(dist_all))
+def maximize_seating_score(df: pd.DataFrame):
+    """
+    Finds the optimal circular seating arrangement for guests to maximize total score.
+    
+    Parameters:
+    - df: pandas DataFrame with columns ['Guest A', 'Score A', 'Guest B']
+    
+    Returns:
+    - optimal_arrangement: List of guests in order around the circular table
+    - max_score: Total combined score of the optimal arrangement
+    """
+    # 1. Build an undirected score matrix (Guest A sitting next to Guest B)
+    # The total satisfaction of a pair sitting together is Score(A->B) + Score(B->A)
+    guests = sorted(list(set(df['Guest A']).union(set(df['Guest B']))))
+    n = len(guests)
+    
+    guest_to_idx = {g: i for i, g in enumerate(guests)}
+    idx_to_guest = {i: g for i, g in enumerate(guests)}
+    
+    # Initialize affinity matrix with 0
+    adj = [[0] * n for _ in range(n)]
+    
+    for _, row in df.iterrows():
+        u = guest_to_idx[row['Guest A']]
+        v = guest_to_idx[row['Guest B']]
+        score = row['Score A']
+        # Add mutual scores since seating adjacent benefits/affects both
+        adj[u][v] += score
+        adj[v][u] += score
+
+    # 2. Branch and Bound DFS to find max weight Hamiltonian cycle
+    best_score = float('-inf')
+    best_path = []
+
+    # Fix guest 0 at position 0 to break rotational symmetry
+    start_guest = 0
+    
+    def dfs(current_guest, visited, path, current_score):
+        nonlocal best_score, best_path
+        
+        # If all guests are seated, close the loop back to start_guest
+        if len(path) == n:
+            final_score = current_score + adj[current_guest][start_guest]
+            if final_score > best_score:
+                best_score = final_score
+                best_path = path[:]
+            return
+
+        for next_guest in range(n):
+            if not visited[next_guest]:
+                # Optimization: Prune early if it's impossible to beat the best score
+                # (Simple branch-and-bound optimization)
+                visited[next_guest] = True
+                path.append(next_guest)
+                
+                dfs(next_guest, visited, path, current_score +
+                     adj[current_guest][next_guest])
+                
+                path.pop()
+                visited[next_guest] = False
+
+    # Break reflection symmetry by forcing guest 0's first neighbor index to be 
+    # smaller than the last neighbor
+    # (Optional micro-optimization: fixes 0 as starting node)
+    visited = [False] * n
+    visited[start_guest] = True
+    dfs(start_guest, visited, [start_guest], 0)
+
+    # Convert indices back to original guest names
+    optimal_arrangement = [idx_to_guest[idx] for idx in best_path]
+    
+    return optimal_arrangement, best_score
 
 
-# %% CALC2
-data2 = pd.DataFrame(
-    list(
-        zip(
-            [
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Alice",
-                "Bob",
-                "Carol",
-                "David",
-                "Eric",
-                "Frank",
-                "George",
-                "Mallory",
-            ],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [
-                "Alice",
-                "Bob",
-                "Carol",
-                "David",
-                "Eric",
-                "Frank",
-                "George",
-                "Mallory",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-                "Me",
-            ],
-        )
-    ),
-    columns=["person1", "score", "person2"],
-)
+def add_neutral_guest(df: pd.DataFrame, new_guest_name: str) -> pd.DataFrame:
+    """
+    Adds a new guest to the dataframe with 0 score toward everyone,
+    and 0 score received from everyone.
+    
+    Parameters:
+    - df: existing pandas DataFrame with columns ['Guest A', 'Score A', 'Guest B']
+    - new_guest_name: Name of the new guest to add
+    
+    Returns:
+    - Updated pandas DataFrame including the new guest
+    """
+    # Find all unique existing guests
+    existing_guests = set(df['Guest A']).union(set(df['Guest B']))
+    
+    new_rows = []
+    for guest in existing_guests:
+        # Score from New Guest to existing guest
+        new_rows.append({'Guest A': new_guest_name, 'Score A': 0, 'Guest B': guest})
+        # Score from existing guest to New Guest
+        new_rows.append({'Guest A': guest, 'Score A': 0, 'Guest B': new_guest_name})
+    
+    # Append the new rows to the DataFrame
+    updated_df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
+    
+    return updated_df
 
-data = data.append(data2, ignore_index=True)
+if __name__ == "__main__":
+    # DATA
+    with open("./data/data_13.txt",) as file:
+        data = file.read().splitlines()
 
-# seating orders
-people2 = data["person1"].unique().tolist()
-orders2 = pd.DataFrame(itertools.permutations(people2))
-orders2.columns = [
-    "start",
-    "step1",
-    "step2",
-    "step3",
-    "step4",
-    "step5",
-    "step6",
-    "step7",
-    "end",
-]
+    data = preprocess_data(data)
+    order = maximize_seating_score(data)
+    print(f"Part 1: {order[-1]}")
 
-
-def CalcDist2(data, df):
-    distances = []
-    for i in tqdm(range(len(df))):
-        start = df["start"][i]
-        step1 = df["step1"][i]
-        step2 = df["step2"][i]
-        step3 = df["step3"][i]
-        step4 = df["step4"][i]
-        step5 = df["step5"][i]
-        step6 = df["step6"][i]
-        step7 = df["step7"][i]
-        end = df["end"][i]
-
-        dist1 = (
-            data.loc[
-                (data["person1"] == start) & (data["person2"] == step1), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == start) & (data["person1"] == step1), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist2 = (
-            data.loc[
-                (data["person1"] == step1) & (data["person2"] == step2), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step1) & (data["person1"] == step2), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist3 = (
-            data.loc[
-                (data["person1"] == step2) & (data["person2"] == step3), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step2) & (data["person1"] == step3), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist4 = (
-            data.loc[
-                (data["person1"] == step3) & (data["person2"] == step4), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step3) & (data["person1"] == step4), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist5 = (
-            data.loc[
-                (data["person1"] == step4) & (data["person2"] == step5), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step4) & (data["person1"] == step5), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist6 = (
-            data.loc[
-                (data["person1"] == step5) & (data["person2"] == step6), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step5) & (data["person1"] == step6), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist7 = (
-            data.loc[
-                (data["person1"] == step6) & (data["person2"] == step7), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step6) & (data["person1"] == step7), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist8 = (
-            data.loc[
-                (data["person1"] == step7) & (data["person2"] == end), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == step7) & (data["person1"] == end), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist9 = (
-            data.loc[
-                (data["person1"] == end) & (data["person2"] == start), ["score"]
-            ].iloc[0]["score"]
-            + data.loc[
-                (data["person2"] == end) & (data["person1"] == start), ["score"]
-            ].iloc[0]["score"]
-        )
-
-        dist_tot = dist1 + dist2 + dist3 + dist4 + dist5 + dist6 + dist7 + dist8 + dist9
-        distances.append(dist_tot)
-
-    return distances
-
-
-dist_all2 = CalcDist2(data, orders2)
-
-print("The highest score is", max(dist_all2))
+    data2 = add_neutral_guest(data, "Me")
+    order2 = maximize_seating_score(data2)
+    print(f"Part 2: {order2[-1]}")
