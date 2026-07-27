@@ -1,33 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 18 23:44:47 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 import pandas as pd
-from collections import Counter
 
-# %% DATA
-data = []
-with open("Data - Day14.txt", "r") as file:
-    for line in file:
-        data.append(line)
-
+# DATA
+time = 2503
+with open("./data/data_14.txt") as file:
+    data = file.read().splitlines()
+  
 data = pd.DataFrame(data)
-# %% CALC 1
+# Part 1
 data = data[0].str.split(expand=True)
 data = data.drop([1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 14], axis=1)
 data.columns = ["Reindeer", "Speed", "Flies", "Rests"]
 data[["Speed", "Flies", "Rests"]] = data[["Speed", "Flies", "Rests"]].astype(int)
 
-test = data.iloc[0]
-time = 2503
-
 
 def DistFly(row, time):
-    deer = row["Reindeer"]
     speed = row["Speed"]
     time_fly = row["Flies"]
     time_rest = row["Rests"]
@@ -45,8 +31,6 @@ def DistFly(row, time):
     else:
         distance = distance + speed * time
 
-    # print("{0} has flown {1} km after {2} seconds".format(deer, distance, 2503))
-
     return distance
 
 
@@ -54,12 +38,12 @@ distances = []
 for i in range(len(data)):
     distances.append(DistFly(data.iloc[i], time))
 
-print("The maximum flown distance is", max(distances))
+print(f"Part 1: {max(distances)}")
 
 
-# %% CALC 2
+# Part 2
 dist_all = []
-for t in range(2503):
+for t in range(1, time): # only starts traveling at t=1
     distances = []
     for i in range(len(data)):
         distances.append(DistFly(data.iloc[i], t))
@@ -70,7 +54,6 @@ for i in dist_all:
     max_score = max(i)
     indices = [j for j, x in enumerate(i) if x == max_score]
     for k in indices:
-        data["Score"].iloc[k] += 1
+        data.at[k, "Score"] += 1
 
-
-print("The highest score is", max(data["Score"]) - 1)
+print(f"Part 2: {max(data["Score"])}")
