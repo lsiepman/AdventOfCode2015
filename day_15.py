@@ -1,222 +1,125 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 19 16:32:30 2020
 
-@author: laura
-"""
-
-# %% IMPORTS
-import pandas as pd
-from tqdm import tqdm
 import itertools
 
-# %% DATA
-data = []
-with open("Data - Day15.txt", "r") as file:
-    for line in file:
-        data.append(line)
-
-data = pd.DataFrame(data)
-
-# %% CALC 1
-data = data[0].str.split(expand=True)
-data[0] = data[0].str.replace(":", "")
-data = data.drop([1, 3, 5, 7, 9], axis=1)
-data[2] = data[2].str.replace(",", "")
-data[4] = data[4].str.replace(",", "")
-data[6] = data[6].str.replace(",", "")
-data[8] = data[8].str.replace(",", "")
-data.columns = ["Ingredient", "Capacity", "Durability", "Flavor", "Texture", "Calories"]
-
-data[["Capacity", "Durability", "Flavor", "Texture", "Calories"]] = data[
-    ["Capacity", "Durability", "Flavor", "Texture", "Calories"]
-].astype(int)
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
 
 
-def CalcScore(sprinkles, pb, frosting, sugar):
-    cap1 = data.loc[data["Ingredient"] == "Sprinkles"]["Capacity"].iloc[0] * sprinkles
-    cap2 = data.loc[data["Ingredient"] == "PeanutButter"]["Capacity"].iloc[0] * pb
-    cap3 = data.loc[data["Ingredient"] == "Frosting"]["Capacity"].iloc[0] * frosting
-    cap4 = data.loc[data["Ingredient"] == "Sugar"]["Capacity"].iloc[0] * sugar
+def data_prep(data):
+    data = pd.DataFrame(data)
 
-    capacity = cap1 + cap2 + cap3 + cap4
+    # data prep
+    data = data[0].str.split(expand=True)
+    data[0] = data[0].str.replace(":", "")
+    data = data.drop([1, 3, 5, 7, 9], axis=1)
+    data[2] = data[2].str.replace(",", "")
+    data[4] = data[4].str.replace(",", "")
+    data[6] = data[6].str.replace(",", "")
+    data[8] = data[8].str.replace(",", "")
+    data.columns = ["Ingredient", "Capacity", "Durability", 
+                    "Flavor", "Texture", "Calories"]
 
-    dur1 = data.loc[data["Ingredient"] == "Sprinkles"]["Durability"].iloc[0] * sprinkles
-    dur2 = data.loc[data["Ingredient"] == "PeanutButter"]["Durability"].iloc[0] * pb
-    dur3 = data.loc[data["Ingredient"] == "Frosting"]["Durability"].iloc[0] * frosting
-    dur4 = data.loc[data["Ingredient"] == "Sugar"]["Durability"].iloc[0] * sugar
+    data[data.columns[1:]] = data[data.columns[1:]].astype(int)
 
-    durability = dur1 + dur2 + dur3 + dur4
+    # 1. Define ingredients properties
+    df_partial = data[data.columns[1:]]
+    matrix = df_partial.to_numpy()
 
-    fla1 = data.loc[data["Ingredient"] == "Sprinkles"]["Flavor"].iloc[0] * sprinkles
-    fla2 = data.loc[data["Ingredient"] == "PeanutButter"]["Flavor"].iloc[0] * pb
-    fla3 = data.loc[data["Ingredient"] == "Frosting"]["Flavor"].iloc[0] * frosting
-    fla4 = data.loc[data["Ingredient"] == "Sugar"]["Flavor"].iloc[0] * sugar
-
-    flavor = fla1 + fla2 + fla3 + fla4
-
-    tex1 = data.loc[data["Ingredient"] == "Sprinkles"]["Texture"].iloc[0] * sprinkles
-    tex2 = data.loc[data["Ingredient"] == "PeanutButter"]["Texture"].iloc[0] * pb
-    tex3 = data.loc[data["Ingredient"] == "Frosting"]["Texture"].iloc[0] * frosting
-    tex4 = data.loc[data["Ingredient"] == "Sugar"]["Texture"].iloc[0] * sugar
-
-    texture = tex1 + tex2 + tex3 + tex4
-
-    score = capacity * durability * flavor * texture
-
-    return score
+    return matrix
 
 
-CalcScore(25, 25, 25, 25)
+def optimize_recipe(matrix, total_spoons=100, calories=None):
+    """Optimizes ingredient ratios to maximize 
+        (Capacity * Durability * Flavor * Texture).
+
+    Parameters:
+      matrix : np.ndarray
+          Input array where rows are ingredients and columns are
+          [Capacity, Durability, Flavor, Texture, Calories].
+      total_spoons : int
+          Target sum of ingredients (default 100).
+      calories : int or float, optional
+          Target of total calories. Defaults to None (no limit).
+
+    Returns:
+      best_score : int
+          Maximized product score.
+      actual_calories : int
+          Total calories for the chosen combination.
+    """
+    props = matrix[:, :4]
+    calories_per_unit = matrix[:, 4]
+    num_ingredients = len(matrix)
+
+    # 1. Define objective function
+    def get_score(x):
+        totals = np.dot(x, props)
+        totals = np.maximum(0, totals)
+        return np.prod(totals)
+
+    def loss(x):
+        return -get_score(x)
+
+    # 2. Base constraint: sum(x) == total_spoons
+    constraints = [{"type": "eq", "fun": lambda x: np.sum(x) - total_spoons}]
+
+    bounds = [(0, total_spoons) for _ in range(num_ingredients)]
+    x0 = [total_spoons / num_ingredients] * num_ingredients
+
+    # 3. Optional calorie target
+    if calories is not None:
+        constraints.append(
+            {
+                "type": "eq",
+                "fun": lambda x, target=calories: np.dot(x, calories_per_unit)
+                - target,
+            }
+        )
+
+    # 4. Continuous optimization
+    res = minimize(
+        loss, x0, method="SLSQP", bounds=bounds, constraints=constraints
+    )
+
+    # 5. Integer neighborhood refinement around the continuous optimum
+    center = np.round(res.x).astype(int)
+
+    best_score = -1
+    best_quantities = None
+
+    delta_range = range(-3, 4)
+    for deltas in itertools.product(delta_range, repeat=num_ingredients):
+        candidate = center + np.array(deltas)
+
+        # Basic constraints check
+        if np.sum(candidate) != total_spoons or np.any(candidate < 0):
+            continue
+
+        # Calorie check (if active)
+        tot_calories = np.dot(candidate, calories_per_unit)
+        if calories is not None and tot_calories != calories:
+            continue
+
+        score = get_score(candidate)
+        if score > best_score:
+            best_score = score
+            best_quantities = candidate
+
+    actual_calories = int(np.dot(best_quantities, calories_per_unit))
+    return int(best_score), actual_calories
 
 
-def sum_to_n(n, size, limit=None):
-    """Produce all lists of `size` positive integers in decreasing order
-    that add up to `n`."""
-    if size == 1:
-        yield [n]
-        return
-    if limit is None:
-        limit = n
-    start = (n + size - 1) // size
-    stop = min(limit, n - size + 1) + 1
-    for i in range(start, stop):
-        for tail in sum_to_n(n - i, size - 1, i):
-            yield [i] + tail
+if __name__ == "__main__":
+
+    # DATA
+    with open("./data/data_15.txt") as file:
+        data = file.read().splitlines()
+
+    matrix = data_prep(data)
+    score_unlimited, cal_unlimited = optimize_recipe(matrix, 100)
+    print(f"Part 1: {score_unlimited}")
+    score_limited, cal_limited = optimize_recipe(matrix, 100, 500)
+    print(f"Part 2: {score_limited}")
 
 
-four_nums = []
-for partition in sum_to_n(100, 4):
-    four_nums.append(partition)
-
-three_nums = []
-for partition in sum_to_n(100, 3):
-    three_nums.append(partition)
-
-two_nums = []
-for partition in sum_to_n(100, 2):
-    two_nums.append(partition)
-
-for i in three_nums:
-    i.append(0)
-
-for i in two_nums:
-    i.append(0)
-    i.append(0)
-
-one_num = [[100, 0, 0, 0]]
-
-all_number_combinations = one_num + two_nums + three_nums + four_nums
-
-all_nums = []
-for i in tqdm(all_number_combinations):
-    all_nums.append(list(itertools.permutations(i)))
-
-combi_all = []
-for i in all_nums:
-    for j in i:
-        combi_all.append(list(j))
-
-combi_all.sort()
-combi_all = list(combi_all for combi_all, _ in itertools.groupby(combi_all))
-
-result = 0
-for i in tqdm(combi_all[:50000]):
-    new_result = CalcScore(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[50000:100000]):
-    new_result = CalcScore(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[100000:150000]):
-    new_result = CalcScore(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[150000:]):
-    new_result = CalcScore(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest cookie score is", result)
-
-
-# %% CALC 2
-def CalcScoreCalorie(sprinkles, pb, frosting, sugar):
-    cap1 = data.loc[data["Ingredient"] == "Sprinkles"]["Capacity"].iloc[0] * sprinkles
-    cap2 = data.loc[data["Ingredient"] == "PeanutButter"]["Capacity"].iloc[0] * pb
-    cap3 = data.loc[data["Ingredient"] == "Frosting"]["Capacity"].iloc[0] * frosting
-    cap4 = data.loc[data["Ingredient"] == "Sugar"]["Capacity"].iloc[0] * sugar
-
-    capacity = cap1 + cap2 + cap3 + cap4
-
-    dur1 = data.loc[data["Ingredient"] == "Sprinkles"]["Durability"].iloc[0] * sprinkles
-    dur2 = data.loc[data["Ingredient"] == "PeanutButter"]["Durability"].iloc[0] * pb
-    dur3 = data.loc[data["Ingredient"] == "Frosting"]["Durability"].iloc[0] * frosting
-    dur4 = data.loc[data["Ingredient"] == "Sugar"]["Durability"].iloc[0] * sugar
-
-    durability = dur1 + dur2 + dur3 + dur4
-
-    fla1 = data.loc[data["Ingredient"] == "Sprinkles"]["Flavor"].iloc[0] * sprinkles
-    fla2 = data.loc[data["Ingredient"] == "PeanutButter"]["Flavor"].iloc[0] * pb
-    fla3 = data.loc[data["Ingredient"] == "Frosting"]["Flavor"].iloc[0] * frosting
-    fla4 = data.loc[data["Ingredient"] == "Sugar"]["Flavor"].iloc[0] * sugar
-
-    flavor = fla1 + fla2 + fla3 + fla4
-
-    tex1 = data.loc[data["Ingredient"] == "Sprinkles"]["Texture"].iloc[0] * sprinkles
-    tex2 = data.loc[data["Ingredient"] == "PeanutButter"]["Texture"].iloc[0] * pb
-    tex3 = data.loc[data["Ingredient"] == "Frosting"]["Texture"].iloc[0] * frosting
-    tex4 = data.loc[data["Ingredient"] == "Sugar"]["Texture"].iloc[0] * sugar
-
-    texture = tex1 + tex2 + tex3 + tex4
-
-    cal1 = data.loc[data["Ingredient"] == "Sprinkles"]["Calories"].iloc[0] * sprinkles
-    cal2 = data.loc[data["Ingredient"] == "PeanutButter"]["Calories"].iloc[0] * pb
-    cal3 = data.loc[data["Ingredient"] == "Frosting"]["Calories"].iloc[0] * frosting
-    cal4 = data.loc[data["Ingredient"] == "Sugar"]["Calories"].iloc[0] * sugar
-
-    calories = cal1 + cal2 + cal3 + cal4
-
-    score = capacity * durability * flavor * texture
-    if calories == 500:
-        return score
-    else:
-        return 0
-
-
-result = 0
-for i in tqdm(combi_all[:50000]):
-    new_result = CalcScoreCalorie(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest 500 Cal cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[50000:100000]):
-    new_result = CalcScoreCalorie(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest 500 Cal cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[100000:150000]):
-    new_result = CalcScoreCalorie(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest 500 Cal cookie score is", result)
-
-result = 0
-for i in tqdm(combi_all[150000:]):
-    new_result = CalcScoreCalorie(i[0], i[1], i[2], i[3])
-    if new_result > result:
-        result = new_result.copy()
-print("The highest 500 Cal cookie score is", result)
