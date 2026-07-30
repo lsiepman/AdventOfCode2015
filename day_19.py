@@ -1,48 +1,67 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 23 10:11:12 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 import re
-import pandas as pd
 
-# %% DATA
-text = ""
-data = []
-with open("Data - Day19.txt", "r") as file:
-    for line in file:
-        data.append(line)
-data = pd.DataFrame(data)
-# %% CALC 1
-medicine = re.findall("[A-Ze][^A-Ze]*", text)
-data = data[0].str.replace("\n", "").str.split("=>", expand=True)
-data[0] = data[0].str.strip()
-data[1] = data[1].str.strip()
-data.columns = ["FROM", "TO"]
-
-
+# DATA
 replacements = []
-for i in range(len(data)):
-    FROM = data["FROM"].iloc[i]
-    TO = data["TO"].iloc[i]
+with open("./data/data_19.txt") as file:
+    for line in file:
+        if "=>" in line:
+            line_list = re.split(r'\W', line)
+            fro = line_list[0]
+            to = line_list[-2]
+            replacements.append((fro, to))
+        elif len(line) < 2:
+            pass
+        else:
+            molecule = line.strip()
 
-    indices = [k for k, x in enumerate(medicine) if x == FROM]
-    for j in indices:
-        changed = medicine.copy()
-        changed[j] = TO
-        replacements.append(changed)
+# Part 1      
+distinct_molecules = set()
+for fro, to in replacements:
+    for idx in range(len(molecule)):
+        # check if the current replacement can be applied
+        if molecule[idx:idx+len(fro)] == fro:
+            # replace and add to possible resulting molecules
+            new_molecule = molecule[:idx] + to + molecule[idx+len(fro):]
+            distinct_molecules.add(new_molecule)
+print(f"Part 1: {len(distinct_molecules)}")
 
-for l in range(len(replacements)):
-    replacements[l] = "".join(replacements[l])
 
-replacements = list(set(replacements))
+# # Part 2
+def replace_section(molecule, replacements):
+    """Replaces molecule based on replacements. Replaced from 'right to left', 
+    so opposite from part 1.
 
-print("The number of different medicine is:", len(replacements))
+    Args:
+        molecule (str): starting molecule
 
-# %% CALC 2
-"""Bruteforcing this takes way too long"""
-# https://www.reddit.com/r/adventofcode/comments/3xflz8/day_19_solutions/cy4etju
-print(sum(map(str.isupper, text)) - 2 * text.count("Rn") - 2 * text.count("Y") - 1)
+    Yields:
+        string: new molecule after replacement has been done
+    """
+    for to, fro in replacements:
+        for idx in range(len(molecule)):
+            if molecule[idx:idx+len(fro)] == fro:
+                new_molecule = molecule[:idx] + to + molecule[idx+len(fro):]
+                yield new_molecule
+
+# sort replacements so longest replacements go first
+replacements = sorted(replacements, key=lambda x: -len(x[1]))
+
+visited = {molecule}
+molecule_list = [molecule]
+
+steps = 0
+while True:
+    temp_molecule_list = []
+    for i in molecule_list:
+        for j in replace_section(i, replacements):
+            if j in visited:
+                continue
+            temp_molecule_list.append(j)
+            visited.add(j)
+            break # only perform the largest replacement (based on order)
+    molecule_list = temp_molecule_list
+    steps += 1
+    if molecule_list[0] == 'e': # ending molecule
+        print(f"Part 2: {steps}")
+        break
+    
