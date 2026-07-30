@@ -1,28 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 20 22:16:51 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
-import itertools
 from collections import Counter
+from itertools import combinations
 
-# %% DATA
-data = [33, 14, 18, 20, 45, 35, 16, 35, 1, 13, 18, 13, 50, 44, 48, 6, 24, 41, 30, 42]
-# %% CALC 1
+# DATA
+data = []
+with open("./data/data_17.txt") as file:
+    for line in file:
+        data.append(int(line))
+
+# Part 1
 result = [
     seq
     for i in range(len(data), 0, -1)
-    for seq in itertools.combinations(data, i)
+    for seq in combinations(data, i)
     if sum(seq) == 150
 ]
-print("There are {} combinations".format(len(result)))
+print(f"Part 1: {len(result)}")
 
-# %% CALC 2
+# Part 2
 lengths = []
 for i in result:
     lengths.append(len(i))
 
-print("The number of combinations with minimal containers is", Counter(lengths)[4])
+print(f"Part 2: {Counter(lengths)[4]}")
