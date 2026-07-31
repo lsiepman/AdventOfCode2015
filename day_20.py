@@ -1,62 +1,57 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 23 22:55:37 2020
+import math
 
-@author: laura
-"""
+# Data
+with open("./data/data_20.txt") as file:
+    data = int(file.read())
 
-
-# %% DATA
-data = 34000000
-
-
-# %% CALC1
-def FindFactors(x):
-    factors = []
-    for i in range(1, x + 1):
+# Part 1
+def CalcPresents(x, mult=10):
+    total = 0
+    limit = int(math.isqrt(x))
+    
+    for i in range(1, limit + 1):
         if x % i == 0:
-            factors.append(i)
+            total += i
+            # Add the paired factor if it's not a perfect square
+            if i != x // i:
+                total += x // i
 
-    return factors
-
-
-def CalcPresents(list_of_factors, mult):
-    presents = [mult * i for i in list_of_factors]
-    total = sum(presents)
-
-    return total
+    return total * mult
 
 
-j = 750000
+j = 0
 result = 0
+
 while result < data:
     j += 1
-    factors = FindFactors(j)
-    result = CalcPresents(factors, 10)
-    print(result)
+    result = CalcPresents(j, 10)
 
-print("House {0} will receive at least {1} presents".format(j, data))
+print(f"Part 1: {j}")
 
+# Part 2
+def CalcPresentsPart2(x, mult=11):
+    total = 0
+    limit = int(math.isqrt(x))
+    
+    for i in range(1, limit + 1):
+        if x % i == 0:
+            paired_factor = x // i
+            
+            # Check if the factor 'i' is within its first 50 stops
+            if paired_factor <= 50:
+                total += i
+                
+            # Check if the paired factor is within its first 50 stops
+            if i <= 50 and i != paired_factor:
+                total += paired_factor
 
-# %% CALC 2
-def SiftFactors(x, list_of_factors):
-    sifted = []
-    for i in list_of_factors:
-        val = x / i
+    return total * mult
 
-        if val < 50:
-            sifted.append(i)
-
-    return sifted
-
-
-j = 750000
+j = 0
 result = 0
+
 while result < data:
     j += 1
-    factors = FindFactors(j)
-    sifted_factors = SiftFactors(j, factors)
-    result = CalcPresents(sifted_factors, 11)
-    print(j, ":", result)
+    result = CalcPresentsPart2(j, 11)
 
-print("House {0} will receive at least {1} presents".format(j, data))
+print(f"Part 2: {j}")
