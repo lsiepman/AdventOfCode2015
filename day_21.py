@@ -1,6 +1,6 @@
-import pandas as pd
 import itertools
 
+import pandas as pd
 
 # DATA
 data = {}
@@ -33,24 +33,27 @@ shop = pd.DataFrame(
             [8, 10, 25, 40, 74, 13, 31, 53, 75, 102, 25, 50, 100, 20, 40, 80],
             [4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 1, 2, 3, 0, 0, 0],
             [0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 0, 0, 0, 1, 2, 3],
+        strict=True
         )
     ),
     columns=["Item", "Cost", "Damage", "Armor"],
 )
 # Part 1
-"""To win, you need to do more damage than the boss every turn. You need to buy the cheapest items to do that"""
+"""To win, you need to do more damage than the boss every turn. 
+You need to buy the cheapest items to do that"""
 
 # DATA PREP
 weapons = shop.iloc[0:5, :]
 armor = shop.iloc[5:10, :]
 rings = shop.iloc[10:16]
 no_rings = pd.DataFrame(
-    list(zip(["No1", "No2"], [0, 0], [0, 0], [0, 0])), columns=rings.columns
+    list(zip(["No1", "No2"], [0, 0], [0, 0], [0, 0], strict=True)), 
+    columns=rings.columns
 )
 rings = pd.concat([rings, no_rings], ignore_index=True)
 armor = pd.concat([
                     armor, 
-                    pd.DataFrame(list(zip(["No"], [0], [0], [0])), 
+                    pd.DataFrame(list(zip(["No"], [0], [0], [0], strict=True)), 
                                  columns=armor.columns)
                     ],
     ignore_index=True,
