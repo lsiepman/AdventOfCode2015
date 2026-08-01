@@ -1,217 +1,120 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 27 11:02:31 2020
-
-@author: laura
-
-credit to https://www.reddit.com/r/adventofcode/comments/3xspyl/day_22_solutions/cy7mbfz/
-"""
-
-# %% IMPORTS
-from copy import deepcopy
-
-# %% DATA
-missile = {
-    "mana": 53,
-    "damage": 4,
-    "heal": 0,
-    "armor": 0,
-    "recharge": 0,
-    "active": 0,
-    "nr": 0,
-}
-drain = {
-    "mana": 73,
-    "damage": 2,
-    "heal": 2,
-    "armor": 0,
-    "recharge": 0,
-    "active": 0,
-    "nr": 1,
-}
-shield = {
-    "mana": 113,
-    "damage": 0,
-    "heal": 0,
-    "armor": 7,
-    "recharge": 0,
-    "active": 6,
-    "nr": 2,
-}
-poison = {
-    "mana": 173,
-    "damage": 3,
-    "heal": 0,
-    "armor": 0,
-    "recharge": 0,
-    "active": 6,
-    "nr": 3,
-}
-recharge = {
-    "mana": 229,
-    "damage": 0,
-    "heal": 0,
-    "armor": 0,
-    "recharge": 101,
-    "active": 5,
-    "nr": 4,
-}
-spells = [missile, drain, shield, poison, recharge]
-
-# %% SOLUTION 1
-ManaMinimum = 10000  # just chose a random number sufficiently large
+import heapq
 
 
-def Battle(boss_hp, hp, mana, lasting_spells, turn, mana_spent):
-    boss_damage = 9
-    armor = 0
+def min_mana_to_win(initial_boss_hp, boss_damage, hard_mode=False):
+    # Priority queue stores tuples:
+    # (mana_spent, player_hp, player_mana, boss_hp, 
+    # shield_timer, poison_timer, recharge_timer)
+    pq = [(0, 50, 500, initial_boss_hp, 0, 0, 0)]
+    visited = set()
 
-    #
-    cast_spells = []
-    for lasting_spell in lasting_spells:
-        if lasting_spell[5] >= 0:
-            boss_hp -= lasting_spell[1]
-            hp += lasting_spell[2]
-            armor += lasting_spell[3]
-            mana += lasting_spell[4]
+    while pq:
+        mana_spent, hp, mana, boss_hp, shield, poison, recharge = heapq.heappop(pq)
 
-        cast_spell = [
-            lasting_spell[0],
-            lasting_spell[1],
-            lasting_spell[2],
-            lasting_spell[3],
-            lasting_spell[4],
-            lasting_spell[5] - 1,
-            lasting_spell[6],
+        # --- 1. PLAYER TURN ---
+        if hard_mode:
+            hp -= 1
+            if hp <= 0:
+                continue
+
+        # Apply active effects at the start of Player turn
+        if shield > 0:
+            shield -= 1
+        if poison > 0:
+            boss_hp -= 3
+            poison -= 1
+        if recharge > 0:
+            mana += 101
+            recharge -= 1
+
+        if boss_hp <= 0:
+            return mana_spent
+
+        # Deduplicate state (include hard_mode context implicitly by search path)
+        state = (hp, mana, boss_hp, shield, poison, recharge)
+        if state in visited:
+            continue
+        visited.add(state)
+
+        # Player casts a spell
+        # (cost, instant_damage, instant_heal, shield_time, poison_time, recharge_time)
+        spells = [
+            (53,  4, 0, 0, 0, 0),  # Magic Missile
+            (73,  2, 2, 0, 0, 0),  # Drain
+            (113, 0, 0, 6, 0, 0),  # Shield
+            (173, 0, 0, 0, 6, 0),  # Poison
+            (229, 0, 0, 0, 0, 5),  # Recharge
         ]
 
-        if cast_spell[5] > 0:
-            cast_spells.append(cast_spell)
+        for cost, dmg, heal, s_time, p_time, r_time in spells:
+            if mana < cost:
+                continue
+            # Cannot cast an effect spell if that effect is still active
+            if s_time > 0 and shield > 0:
+                continue
+            if p_time > 0 and poison > 0:
+                continue
+            if r_time > 0 and recharge > 0:
+                continue
 
-    if boss_hp <= 0:
-        global ManaMinimum
-        if mana_spent < ManaMinimum:
-            ManaMinimum = mana_spent
-        return True
+            # Cast spell
+            next_mana_spent = mana_spent + cost
+            next_mana = mana - cost
+            next_hp = hp + heal
+            next_boss_hp = boss_hp - dmg
+            next_shield = s_time if s_time > 0 else shield
+            next_poison = p_time if p_time > 0 else poison
+            next_recharge = r_time if r_time > 0 else recharge
 
-    if mana_spent >= ManaMinimum:
-        return False
+            if next_boss_hp <= 0:
+                return next_mana_spent
 
-    if turn == "player":
-        for i in range(len(spells)):
-            spell = list(spells[i].values())
-            spell_is_active = False
-            for j in range(len(cast_spells)):
-                if cast_spells[j][6] == spell[6]:
-                    spell_is_active = True
-                    break
+            # --- 2. BOSS TURN ---
+            # Apply active effects at the start of Boss turn
+            armor = 0
+            if next_shield > 0:
+                armor = 7
+                next_shield -= 1
+            if next_poison > 0:
+                next_boss_hp -= 3
+                next_poison -= 1
+            if next_recharge > 0:
+                next_mana += 101
+                next_recharge -= 1
 
-            cost = spell[0]
-            if cost <= mana and not spell_is_active:
-                cast = deepcopy(cast_spells)
-                cast.append(spell)
-                new_mana_spent = mana_spent + cost
-                new_mana = mana - cost
-                Battle(
-                    boss_hp=boss_hp,
-                    hp=hp,
-                    mana=new_mana,
-                    lasting_spells=cast,
-                    turn="boss",
-                    mana_spent=new_mana_spent,
+            if next_boss_hp <= 0:
+                return next_mana_spent
+
+            # Boss attacks
+            damage_dealt = max(1, boss_damage - armor)
+            next_hp -= damage_dealt
+
+            if next_hp > 0:
+                heapq.heappush(
+                    pq,
+                    (
+                        next_mana_spent,
+                        next_hp,
+                        next_mana,
+                        next_boss_hp,
+                        next_shield,
+                        next_poison,
+                        next_recharge,
+                    ),
                 )
 
-    else:
-        boss_attack = boss_damage - armor
-        if boss_attack < 1:
-            boss_attack = 1
-        hp -= boss_attack
+    return -1  # No solution found
 
-        if hp > 0:
-            Battle(boss_hp, hp, mana, cast_spells, "player", mana_spent)
+if __name__ == "__main__":
+    # DATA
+    data = {}
+    with open("./data/data_22.txt") as file:
+        for line in file:
+            k,v = line.split(":")
+            data[k.strip()] = int(v)
 
+    hp = data["Hit Points"]
+    dam = data["Damage"]
 
-Battle(boss_hp=51, hp=50, mana=500, lasting_spells=[], turn="player", mana_spent=0)
-print(ManaMinimum)
-
-
-# %% CALC 2
-ManaMinimum = 10000  # just chose a random number sufficiently large
-
-
-def BattleHard(boss_hp, hp, mana, lasting_spells, turn, mana_spent):
-    boss_damage = 9
-    armor = 0
-
-    if turn == "player":
-        hp -= 1
-        if hp <= 0:
-            return False
-
-    # hard_mode
-    cast_spells = []
-    for lasting_spell in lasting_spells:
-        if lasting_spell[5] >= 0:
-            boss_hp -= lasting_spell[1]
-            hp += lasting_spell[2]
-            armor += lasting_spell[3]
-            mana += lasting_spell[4]
-
-        cast_spell = [
-            lasting_spell[0],
-            lasting_spell[1],
-            lasting_spell[2],
-            lasting_spell[3],
-            lasting_spell[4],
-            lasting_spell[5] - 1,
-            lasting_spell[6],
-        ]
-
-        if cast_spell[5] > 0:  # spell carries over
-            cast_spells.append(cast_spell)
-
-    if boss_hp <= 0:
-        global ManaMinimum
-        if mana_spent < ManaMinimum:
-            ManaMinimum = mana_spent
-        return True
-
-    if mana_spent >= ManaMinimum:
-        return False
-
-    if turn == "player":
-        for i in range(len(spells)):
-            spell = list(spells[i].values())
-            spell_is_active = False
-            for j in range(len(cast_spells)):
-                if cast_spells[j][6] == spell[6]:
-                    spell_is_active = True
-                    break
-
-            cost = spell[0]
-            if cost <= mana and not spell_is_active:
-                cast = deepcopy(cast_spells)
-                cast.append(spell)
-                new_mana_spent = mana_spent + cost
-                new_mana = mana - cost
-                BattleHard(
-                    boss_hp=boss_hp,
-                    hp=hp,
-                    mana=new_mana,
-                    lasting_spells=cast,
-                    turn="boss",
-                    mana_spent=new_mana_spent,
-                )
-
-    else:
-        boss_attack = boss_damage - armor
-        if boss_attack < 1:
-            boss_attack = 1
-        hp -= boss_attack
-
-        if hp > 0:
-            BattleHard(boss_hp, hp, mana, cast_spells, "player", mana_spent)
-
-
-BattleHard(boss_hp=51, hp=50, mana=500, lasting_spells=[], turn="player", mana_spent=0)
-print(ManaMinimum)
+    print(f"Part 1: {min_mana_to_win(hp, dam, hard_mode=False)}")
+    print(f"Part 2: {min_mana_to_win(hp, dam, hard_mode=True)}")
