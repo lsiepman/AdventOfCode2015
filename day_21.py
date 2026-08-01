@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 24 17:09:09 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 import pandas as pd
 import itertools
 
 
-# %% DATA
-data = {"Hit Points": 100, "Damage": 8, "Armor": 2}
+# DATA
+data = {}
+with open("./data/data_21.txt") as file:
+    for line in file:
+        k,v = line.split(":")
+        data[k.strip()] = int(v)
+
 shop = pd.DataFrame(
     list(
         zip(
@@ -40,7 +37,7 @@ shop = pd.DataFrame(
     ),
     columns=["Item", "Cost", "Damage", "Armor"],
 )
-# %% CALC 1
+# Part 1
 """To win, you need to do more damage than the boss every turn. You need to buy the cheapest items to do that"""
 
 # DATA PREP
@@ -50,9 +47,12 @@ rings = shop.iloc[10:16]
 no_rings = pd.DataFrame(
     list(zip(["No1", "No2"], [0, 0], [0, 0], [0, 0])), columns=rings.columns
 )
-rings = rings.append(no_rings, ignore_index=True)
-armor = armor.append(
-    pd.DataFrame(list(zip(["No"], [0], [0], [0])), columns=armor.columns),
+rings = pd.concat([rings, no_rings], ignore_index=True)
+armor = pd.concat([
+                    armor, 
+                    pd.DataFrame(list(zip(["No"], [0], [0], [0])), 
+                                 columns=armor.columns)
+                    ],
     ignore_index=True,
 )
 
@@ -116,9 +116,7 @@ for i in range(len(combinations)):
 
 answer = result.loc[result["Wins"] == "player"]
 
-print("The cheapest win is", min(answer["Costs"]))
+print(f"Part 1: {min(answer["Costs"])}")
 
-
-# %% CALC 2
 answer2 = result.loc[result["Wins"] == "boss"]
-print("The most expensive way to lose is", max(answer2["Costs"]))
+print(f"Part 2: {max(answer2["Costs"])}")
