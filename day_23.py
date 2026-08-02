@@ -1,26 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Feb  1 16:37:36 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
-import pandas as pd
 import re
+
 import numpy as np
+import pandas as pd
 
+# DATA
 
-# %% DATA
-data = []
-with open("Data - Day23.txt", "r") as file:
-    for line in file:
-        data.append(line)
+with open("./data/data_23.txt") as file:
+    data = file.read().splitlines()
 
 data = pd.DataFrame(data, columns=["all"])
 
 
-# %% CALC 1
+# CALC 1
 def FindAction(string):
     return re.search(r"^[a-z]{3}", string).group()
 
@@ -89,10 +80,10 @@ def FindAnswer(data, a=0, b=0):
 
     return a, b
 
-
+# Part 1
 a, b = FindAnswer(data)
-print("b =", b)
+print(f"Part 1: {b}")
 
-# %% CALC 2
+# Part 2
 a, b = FindAnswer(data, a=1)
-print("b =", b)
+print(f"Part 2: {b}")
