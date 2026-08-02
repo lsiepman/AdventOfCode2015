@@ -1,10 +1,12 @@
 from itertools import combinations
 from math import prod
 
+
 def solve(packages: list[int], num_groups: int) -> int:
     """
     Finds the minimum Quantum Entanglement for the passenger compartment (Group 1).
-    Group 1 must have the fewest packages possible and sum to sum(packages) // num_groups.
+    Group 1 must have the fewest packages possible and 
+    sum to sum(packages) // num_groups.
     """
     target_weight = sum(packages) // num_groups
     
