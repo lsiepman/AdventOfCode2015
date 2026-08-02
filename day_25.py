@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Feb  1 21:30:30 2020
+import re
 
-@author: laura
-"""
+#  DATA
+with open("./data/data_25.txt") as file:
+    data = file.read()
 
-# %% IMPORTS
-
-# %% DATA
-row_data = 2947
-col_data = 3029
+numbers = re.findall(r"(\d+)", data)
+row_data = int(numbers[0])
+col_data = int(numbers[1])
 
 
-# %% CALC 1
 def CalcNextCode(code):
     return (code * 252533) % 33554393
 
@@ -31,7 +27,7 @@ def CalcSeq(input_row, input_col, code=20151125):
 
         code = CalcNextCode(code)
         if row == input_row and col == input_col:
-            print(code)
+            print(f"Part 1: {code}")
             break
 
 
