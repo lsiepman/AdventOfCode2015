@@ -1,80 +1,34 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Feb  1 20:22:29 2020
-
-@author: laura
-"""
-
-# %% IMPORTS
 from itertools import combinations
-from operator import mul
-from functools import reduce
+from math import prod
 
-# %% DATA
-packages = [
-    1,
-    2,
-    3,
-    7,
-    11,
-    13,
-    17,
-    19,
-    23,
-    31,
-    37,
-    41,
-    43,
-    47,
-    53,
-    59,
-    61,
-    67,
-    71,
-    73,
-    79,
-    83,
-    89,
-    97,
-    101,
-    103,
-    107,
-    109,
-    113,
-]
-# %% GOAL 1
-"""
-What is the quantum entanglement of the first group of packages in the ideal configuration?"""
-# %% CALC 1
-print("goal weight =", sum(packages) / 3)  # 520
-all_combinations = [
-    seq
-    for i in range(len(packages), 0, -1)
-    for seq in combinations(packages, i)
-    if sum(seq) == 520
-]
+def solve(packages: list[int], num_groups: int) -> int:
+    """
+    Finds the minimum Quantum Entanglement for the passenger compartment (Group 1).
+    Group 1 must have the fewest packages possible and sum to sum(packages) // num_groups.
+    """
+    target_weight = sum(packages) // num_groups
+    
+    # Sort descending to find products or evaluate constraints faster
+    packages.sort(reverse=True)
+    
+    # Search for the smallest possible combination length
+    for size in range(1, len(packages) + 1):
+        # Generate combinations of the current size only
+        valid_combos = [
+            combo for combo in combinations(packages, size) 
+            if sum(combo) == target_weight
+        ]
+        
+        # If we found valid group(s) of this size, pick the minimum Quantum Entanglement
+        if valid_combos:
+            return min(prod(combo) for combo in valid_combos)
+            
+    raise ValueError("No valid grouping found.")
 
-len_all_combinations = [len(i) for i in all_combinations]
-print(min(len_all_combinations))
-indices_min = [index for index, value in enumerate(len_all_combinations) if value == 6]
+# Read Data
+with open("./data/data_24.txt") as file:
+    packages = [int(line.strip()) for line in file if line.strip()]
 
-short_combinations = [all_combinations[i] for i in indices_min]
-quantum_short = [reduce(mul, i) for i in short_combinations]
-print(min(quantum_short))
-
-# %% CALC 2
-print("goal weight =", sum(packages) / 4)  # 390
-all_combinations = [
-    seq
-    for i in range(len(packages), 0, -1)
-    for seq in combinations(packages, i)
-    if sum(seq) == 390
-]
-
-len_all_combinations = [len(i) for i in all_combinations]
-print(min(len_all_combinations))
-indices_min = [index for index, value in enumerate(len_all_combinations) if value == 4]
-
-short_combinations = [all_combinations[i] for i in indices_min]
-quantum_short = [reduce(mul, i) for i in short_combinations]
-print(min(quantum_short))
+# Solves dynamically for any input dataset
+print(f"Part 1: {solve(packages, num_groups=3)}")
+print(f"Part 2: {solve(packages, num_groups=4)}")
